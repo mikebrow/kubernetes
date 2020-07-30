@@ -27,7 +27,9 @@ import (
 
 type pullResult struct {
 	imageRef string
-	err      error
+	// hash of successful pull with auth, nil if no auth used or error
+	hash string
+	err  error
 }
 
 type imagePuller interface {
@@ -46,9 +48,10 @@ func newParallelImagePuller(imageService kubecontainer.ImageService) imagePuller
 
 func (pip *parallelImagePuller) pullImage(spec kubecontainer.ImageSpec, pullSecrets []v1.Secret, pullChan chan<- pullResult, podSandboxConfig *runtimeapi.PodSandboxConfig) {
 	go func() {
-		imageRef, err := pip.imageService.PullImage(spec, pullSecrets, podSandboxConfig)
+		imageRef, hash, err := pip.imageService.PullImage(spec, pullSecrets, podSandboxConfig)
 		pullChan <- pullResult{
 			imageRef: imageRef,
+			hash:     hash,
 			err:      err,
 		}
 	}()
@@ -86,9 +89,10 @@ func (sip *serialImagePuller) pullImage(spec kubecontainer.ImageSpec, pullSecret
 
 func (sip *serialImagePuller) processImagePullRequests() {
 	for pullRequest := range sip.pullRequests {
-		imageRef, err := sip.imageService.PullImage(pullRequest.spec, pullRequest.pullSecrets, pullRequest.podSandboxConfig)
+		imageRef, hash, err := sip.imageService.PullImage(pullRequest.spec, pullRequest.pullSecrets, pullRequest.podSandboxConfig)
 		pullRequest.pullChan <- pullResult{
 			imageRef: imageRef,
+			hash:     hash,
 			err:      err,
 		}
 	}

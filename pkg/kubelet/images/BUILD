@@ -18,10 +18,13 @@ go_library(
     ],
     importpath = "k8s.io/kubernetes/pkg/kubelet/images",
     deps = [
+        "//pkg/credentialprovider:go_default_library",
+        "//pkg/credentialprovider/secrets:go_default_library",
         "//pkg/kubelet/apis/stats/v1alpha1:go_default_library",
         "//pkg/kubelet/container:go_default_library",
         "//pkg/kubelet/events:go_default_library",
         "//pkg/kubelet/util/sliceutils:go_default_library",
+        "//pkg/util/parsers:go_default_library",
         "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/util/errors:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/util/sets:go_default_library",
