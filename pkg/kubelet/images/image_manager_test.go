@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
-	. "k8s.io/kubernetes/pkg/kubelet/container"
+	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	ctest "k8s.io/kubernetes/pkg/kubelet/container/testing"
 )
 
@@ -172,7 +172,7 @@ func pullerTestEnv(c pullerTestCase, serialized bool) (puller ImageManager, fake
 	fakeRuntime = &ctest.FakeRuntime{}
 	fakeRecorder := &record.FakeRecorder{}
 
-	fakeRuntime.ImageList = []Image{{ID: "present_image:latest"}}
+	fakeRuntime.ImageList = []kubecontainer.Image{{ID: "present_image:latest"}}
 	fakeRuntime.Err = c.pullerErr
 	fakeRuntime.InspectErr = c.inspectErr
 
@@ -282,7 +282,7 @@ func TestPullAndListImageWithPodAnnotations(t *testing.T) {
 	useSerializedEnv := true
 	puller, fakeClock, fakeRuntime, container := pullerTestEnv(c, useSerializedEnv)
 	fakeRuntime.CalledFunctions = nil
-	fakeRuntime.ImageList = []Image{}
+	fakeRuntime.ImageList = []kubecontainer.Image{}
 	fakeClock.Step(time.Second)
 
 	t.Run(c.testName, func(t *testing.T) {
@@ -296,11 +296,123 @@ func TestPullAndListImageWithPodAnnotations(t *testing.T) {
 		image := images[0]
 		assert.Equal(t, "missing_image:latest", image.ID, "Image ID")
 
-		expectedAnnotations := []Annotation{
+		expectedAnnotations := []kubecontainer.Annotation{
 			{
 				Name:  "kubernetes.io/runtimehandler",
 				Value: "handler_name",
 			}}
 		assert.Equal(t, expectedAnnotations, image.Spec.Annotations, "image spec annotations")
 	})
+}
+
+func TestShouldPullImage(t *testing.T) {
+	pullIfNotPresent := &v1.Container{
+		Name:            "container_name",
+		Image:           "container_image",
+		ImagePullPolicy: v1.PullIfNotPresent,
+	}
+	pullNever := &v1.Container{
+		Name:            "container_name",
+		Image:           "container_image",
+		ImagePullPolicy: v1.PullNever,
+	}
+	pullAlways := &v1.Container{
+		Name:            "container_name",
+		Image:           "container_image",
+		ImagePullPolicy: v1.PullAlways,
+	}
+	tests := []struct {
+		description     string
+		container       *v1.Container
+		imagePresent    bool
+		pulledBySecret  bool
+		ensuredBySecret bool
+		expected        bool
+	}{
+		{
+			description:     "PullAlways should always pull esp. if not present",
+			container:       pullAlways,
+			imagePresent:    false,
+			pulledBySecret:  false,
+			ensuredBySecret: false,
+			expected:        true,
+		},
+		{
+			description:     "PullAlways should always pull even if present and not pulled by secret",
+			container:       pullAlways,
+			imagePresent:    true,
+			pulledBySecret:  false,
+			ensuredBySecret: false,
+			expected:        true,
+		},
+		{
+			description:     "PullAlways should always pull even if present and ensuredBySecret",
+			container:       pullAlways,
+			imagePresent:    true,
+			pulledBySecret:  true,
+			ensuredBySecret: true,
+			expected:        true,
+		},
+		{
+			description:     "PullIfNotPresent should pull if not present",
+			container:       pullIfNotPresent,
+			imagePresent:    false,
+			pulledBySecret:  false,
+			ensuredBySecret: false,
+			expected:        true,
+		},
+		{
+			description:     "PullIfNotPresent should pull if not present even if pulledBySecret and ensuredBySecret",
+			container:       pullIfNotPresent,
+			imagePresent:    false,
+			pulledBySecret:  true,
+			ensuredBySecret: true,
+			expected:        true,
+		},
+		{
+			description:     "PullIfNotPresent should not pull if present (and secrets are not involved)",
+			container:       pullIfNotPresent,
+			imagePresent:    true,
+			pulledBySecret:  false,
+			ensuredBySecret: false,
+			expected:        false,
+		},
+		{
+			description:     "PullIfNotPresent should not pull if present (and secrets are involved and match)",
+			container:       pullIfNotPresent,
+			imagePresent:    true,
+			pulledBySecret:  true,
+			ensuredBySecret: true,
+			expected:        false,
+		},
+		{
+			description:     "PullIfNotPresent should pull if present and secrets are involved and no match",
+			container:       pullIfNotPresent,
+			imagePresent:    true,
+			pulledBySecret:  true,
+			ensuredBySecret: false,
+			expected:        true,
+		},
+		{
+			description:     "PullNever should never pull",
+			container:       pullNever,
+			imagePresent:    false,
+			pulledBySecret:  false,
+			ensuredBySecret: false,
+			expected:        false,
+		},
+		{
+			description:     "PullNever should never pull even even if pulled by secret and not ensured by secret",
+			container:       pullNever,
+			imagePresent:    true,
+			pulledBySecret:  true,
+			ensuredBySecret: false,
+			expected:        false,
+		},
+	}
+
+	for i, test := range tests {
+		sp := shouldPullImage(test.container, test.imagePresent, test.pulledBySecret, test.ensuredBySecret)
+		assert.Equal(t, test.expected, sp, "TestCase[%d]: %s", i, test.description)
+	}
 }
