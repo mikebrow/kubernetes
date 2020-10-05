@@ -2006,9 +2006,12 @@ type ExecAction struct {
 type Probe struct {
 	// The action taken to determine the health of a container
 	Handler
-	// Length of time before health checking is activated.  In seconds.
+	// Length of time before health checking is activated.  In seconds. Defaults to 1.
 	// +optional
 	InitialDelaySeconds int32
+	// Length of time before health checking is activated.  In milliseconds. Defaults to 0.
+	// +optional
+	InitialDelayMilliseconds int32
 	// Length of time before health checking times out.  In seconds.
 	// +optional
 	TimeoutSeconds int32

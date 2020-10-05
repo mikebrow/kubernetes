@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/metrics"
 	"k8s.io/klog/v2"
@@ -223,7 +223,8 @@ func (w *worker) doProbe() (keepGoing bool) {
 	}
 
 	// Probe disabled for InitialDelaySeconds.
-	if int32(time.Since(c.State.Running.StartedAt.Time).Seconds()) < w.spec.InitialDelaySeconds {
+	if time.Since(c.State.Running.StartedAt.Time) <
+		(time.Duration(w.spec.InitialDelaySeconds)*time.Second + time.Duration(w.spec.InitialDelayMilliseconds)*time.Millisecond) {
 		return true
 	}
 
