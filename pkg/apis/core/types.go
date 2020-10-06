@@ -2018,6 +2018,11 @@ type Probe struct {
 	// How often (in seconds) to perform the probe.
 	// +optional
 	PeriodSeconds int32
+	// How often (in milliseconds) to perform the probe.
+	// Default to 0.
+	// If this field is set, the PeriodSeconds field is ignored.
+	// +optional
+	PeriodMilliseconds int32
 	// Minimum consecutive successes for the probe to be considered successful after having failed.
 	// Must be 1 for liveness and startup.
 	// +optional

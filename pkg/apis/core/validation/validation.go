@@ -2533,7 +2533,7 @@ func validateProbe(probe *core.Probe, fldPath *field.Path) field.ErrorList {
 
 	allErrs = append(allErrs, ValidateNonnegativeField(int64(probe.InitialDelaySeconds), fldPath.Child("initialDelaySeconds"))...)
 	if probe.InitialDelayMilliseconds < 0 || probe.InitialDelayMilliseconds >= 1000 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("initialDelayMilliseconds"), probe.InitialDelayMilliseconds, "milliseconds must be 0 or greater and less than 1000")...)
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("initialDelayMilliseconds"), probe.InitialDelayMilliseconds, "milliseconds must be 0 or greater and less than 1000"))
 	}
 	allErrs = append(allErrs, ValidateNonnegativeField(int64(probe.TimeoutSeconds), fldPath.Child("timeoutSeconds"))...)
 	allErrs = append(allErrs, ValidateNonnegativeField(int64(probe.PeriodSeconds), fldPath.Child("periodSeconds"))...)

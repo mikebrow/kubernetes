@@ -6467,6 +6467,8 @@ func autoConvert_v1_Probe_To_core_Probe(in *v1.Probe, out *core.Probe, s convers
 	out.PeriodSeconds = in.PeriodSeconds
 	out.SuccessThreshold = in.SuccessThreshold
 	out.FailureThreshold = in.FailureThreshold
+	out.InitialDelayMilliseconds = in.InitialDelayMilliseconds
+	out.PeriodMilliseconds = in.PeriodMilliseconds
 	return nil
 }
 
@@ -6480,8 +6482,10 @@ func autoConvert_core_Probe_To_v1_Probe(in *core.Probe, out *v1.Probe, s convers
 		return err
 	}
 	out.InitialDelaySeconds = in.InitialDelaySeconds
+	out.InitialDelayMilliseconds = in.InitialDelayMilliseconds
 	out.TimeoutSeconds = in.TimeoutSeconds
 	out.PeriodSeconds = in.PeriodSeconds
+	out.PeriodMilliseconds = in.PeriodMilliseconds
 	out.SuccessThreshold = in.SuccessThreshold
 	out.FailureThreshold = in.FailureThreshold
 	return nil
