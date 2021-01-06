@@ -2009,20 +2009,12 @@ type Probe struct {
 	// Length of time before health checking is activated.  In seconds. Defaults to 1.
 	// +optional
 	InitialDelaySeconds int32
-	// Length of time before health checking is activated.  In milliseconds. Defaults to 0.
-	// +optional
-	InitialDelayMilliseconds int32
 	// Length of time before health checking times out.  In seconds.
 	// +optional
 	TimeoutSeconds int32
 	// How often (in seconds) to perform the probe.
 	// +optional
 	PeriodSeconds int32
-	// How often (in milliseconds) to perform the probe.
-	// Default to 0.
-	// If this field is set, the PeriodSeconds field is ignored.
-	// +optional
-	PeriodMilliseconds int32
 	// Minimum consecutive successes for the probe to be considered successful after having failed.
 	// Must be 1 for liveness and startup.
 	// +optional
@@ -2030,6 +2022,11 @@ type Probe struct {
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
 	// +optional
 	FailureThreshold int32
+	// How often (in milliseconds) to perform the probe.
+	// Default to 0.
+	// If this field is set, the PeriodSeconds field is ignored.
+	// +optional
+	PeriodMilliseconds int32
 }
 
 // PullPolicy describes a policy for if/when to pull a container image

@@ -229,7 +229,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 
 	// Probe disabled for InitialDelaySeconds.
 	if time.Since(c.State.Running.StartedAt.Time) <
-		(time.Duration(w.spec.InitialDelaySeconds)*time.Second + time.Duration(w.spec.InitialDelayMilliseconds)*time.Millisecond) {
+		time.Duration(w.spec.InitialDelaySeconds)*time.Second {
 		return true
 	}
 

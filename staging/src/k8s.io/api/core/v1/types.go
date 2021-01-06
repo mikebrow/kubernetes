@@ -2117,15 +2117,11 @@ type Probe struct {
 	// Defaults to 3. Minimum value is 1.
 	// +optional
 	FailureThreshold int32 `json:"failureThreshold,omitempty" protobuf:"varint,6,opt,name=failureThreshold"`
-	// Number of milliseconds after the container has started before liveness probes are initiated.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	// +optional
-	InitialDelayMilliseconds int32 `json:"initialDelayMilliseconds,omitempty" protobuf:"varint,7,opt,name=initialDelayMilliseconds"`
 	// How often (in milliseconds) to perform the probe.
 	// Default to 0.
 	// If this field is set, the PeriodSeconds field is ignored.
 	// +optional
-	PeriodMilliseconds int32 `json:"periodMilliseconds,omitempty" protobuf:"varint,8,opt,name=periodMilliseconds"`
+	PeriodMilliseconds int32 `json:"periodMilliseconds,omitempty" protobuf:"varint,7,opt,name=periodMilliseconds"`
 }
 
 // PullPolicy describes a policy for if/when to pull a container image
