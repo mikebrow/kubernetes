@@ -42,10 +42,12 @@ var defaultProbe = &v1.Probe{
 	Handler: v1.Handler{
 		Exec: &v1.ExecAction{},
 	},
-	TimeoutSeconds:   1,
-	PeriodSeconds:    1,
+	TimeoutSeconds: 1,
+	// PeriodSeconds:    1,
 	SuccessThreshold: 1,
 	FailureThreshold: 3,
+	//
+	PeriodMilliseconds: 50,
 }
 
 func TestAddRemovePods(t *testing.T) {
