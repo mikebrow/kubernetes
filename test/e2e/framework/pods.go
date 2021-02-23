@@ -91,6 +91,7 @@ type PodClient struct {
 // Create creates a new pod according to the framework specifications (don't wait for it to start).
 func (c *PodClient) Create(pod *v1.Pod) *v1.Pod {
 	c.mungeSpec(pod)
+	ginkgo.By("creating pod with spec: " + fmt.Sprintf("%+v", pod))
 	p, err := c.PodInterface.Create(context.TODO(), pod, metav1.CreateOptions{})
 	ExpectNoError(err, "Error creating Pod")
 	return p

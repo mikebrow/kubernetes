@@ -2096,6 +2096,7 @@ type Probe struct {
 	// The action taken to determine the health of a container
 	Handler `json:",inline" protobuf:"bytes,1,opt,name=handler"`
 	// Number of seconds after the container has started before liveness probes are initiated.
+	// Defaults to 1.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +optional
 	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" protobuf:"varint,2,opt,name=initialDelaySeconds"`
@@ -2106,6 +2107,7 @@ type Probe struct {
 	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" protobuf:"varint,3,opt,name=timeoutSeconds"`
 	// How often (in seconds) to perform the probe.
 	// Default to 10 seconds. Minimum value is 1.
+	// If PeriodMilliseconds is set, this field is ignored.
 	// +optional
 	PeriodSeconds int32 `json:"periodSeconds,omitempty" protobuf:"varint,4,opt,name=periodSeconds"`
 	// Minimum consecutive successes for the probe to be considered successful after having failed.
@@ -2116,6 +2118,10 @@ type Probe struct {
 	// Defaults to 3. Minimum value is 1.
 	// +optional
 	FailureThreshold int32 `json:"failureThreshold,omitempty" protobuf:"varint,6,opt,name=failureThreshold"`
+	// How often (in milliseconds) to perform the probe, defaults to 0.
+	// If this field is set, the PeriodSeconds field is ignored.
+	// +optional
+	PeriodMilliseconds int32 `json:"periodMilliseconds,omitempty" protobuf:"varint,7,opt,name=periodMilliseconds"`
 }
 
 // PullPolicy describes a policy for if/when to pull a container image

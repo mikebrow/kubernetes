@@ -2006,7 +2006,8 @@ type ExecAction struct {
 type Probe struct {
 	// The action taken to determine the health of a container
 	Handler
-	// Length of time before health checking is activated.  In seconds.
+	// Number of seconds after the container has started before liveness probes are initiated.
+	// Defaults to 1.
 	// +optional
 	InitialDelaySeconds int32
 	// Length of time before health checking times out.  In seconds.
@@ -2022,6 +2023,10 @@ type Probe struct {
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
 	// +optional
 	FailureThreshold int32
+	// How often (in milliseconds) to perform the probe, defaults to 0.
+	// If this field is set, the PeriodSeconds field is ignored.
+	// +optional
+	PeriodMilliseconds int32
 }
 
 // PullPolicy describes a policy for if/when to pull a container image
