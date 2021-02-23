@@ -38,14 +38,31 @@ func init() {
 	runtime.ReallyCrash = true
 }
 
+const slow_period_in_seconds int32 = 1
+const slow_interval = time.Duration(slow_period_in_seconds) * time.Second
+
 var defaultProbe = &v1.Probe{
 	Handler: v1.Handler{
 		Exec: &v1.ExecAction{},
 	},
 	TimeoutSeconds:   1,
-	PeriodSeconds:    1,
+	PeriodSeconds:    slow_period_in_seconds,
 	SuccessThreshold: 1,
 	FailureThreshold: 3,
+}
+
+const fast_period_in_milliseconds int32 = 200
+const fast_interval = time.Duration(fast_period_in_milliseconds) * time.Millisecond // TODO (WIP) mikebrow.. hmm probabaly need this to be a parameter
+
+var defaultFastProbe = &v1.Probe{
+	Handler: v1.Handler{
+		Exec: &v1.ExecAction{},
+	},
+	TimeoutSeconds: 1,
+	//PeriodSeconds:    1, // TODO mikebrow do I have to set this to zero
+	SuccessThreshold:   1,
+	FailureThreshold:   3,
+	PeriodMilliseconds: fast_period_in_milliseconds,
 }
 
 func TestAddRemovePods(t *testing.T) {
@@ -88,6 +105,30 @@ func TestAddRemovePods(t *testing.T) {
 		},
 	}
 
+	fastProbePod := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "fast_probe_pod",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				Name: "probe1",
+			}, {
+				Name:           "readiness",
+				ReadinessProbe: defaultFastProbe,
+			}, {
+				Name: "probe2",
+			}, {
+				Name:          "liveness",
+				LivenessProbe: defaultFastProbe,
+			}, {
+				Name: "probe3",
+			}, {
+				Name:         "startup",
+				StartupProbe: defaultFastProbe,
+			}},
+		},
+	}
+
 	m := newTestManager()
 	defer cleanup(t, m)
 	if err := expectProbes(m, nil); err != nil {
@@ -119,7 +160,7 @@ func TestAddRemovePods(t *testing.T) {
 
 	// Removing probed pod.
 	m.RemovePod(&probePod)
-	if err := waitForWorkerExit(m, probePaths); err != nil {
+	if err := waitForWorkerExit(m, probePaths, slow_interval); err != nil {
 		t.Fatal(err)
 	}
 	if err := expectProbes(m, nil); err != nil {
@@ -128,6 +169,30 @@ func TestAddRemovePods(t *testing.T) {
 
 	// Removing already removed pods should be a no-op.
 	m.RemovePod(&probePod)
+	if err := expectProbes(m, nil); err != nil {
+		t.Error(err)
+	}
+
+	// Adding a pod with fast probes.
+	m.AddPod(&fastProbePod)
+	fastProbePaths := []probeKey{
+		{"fast_probe_pod", "readiness", readiness},
+		{"fast_probe_pod", "liveness", liveness},
+		{"fast_probe_pod", "startup", startup},
+	}
+	if err := expectProbes(m, fastProbePaths); err != nil {
+		t.Error(err)
+	}
+	// Removing fast probed pod.
+	m.RemovePod(&fastProbePod)
+	if err := waitForWorkerExit(m, fastProbePaths, fast_interval); err != nil {
+		t.Fatal(err)
+	}
+	if err := expectProbes(m, nil); err != nil {
+		t.Error(err)
+	}
+	// Removing already removed fast probe pods should be a no-op.
+	m.RemovePod(&fastProbePod)
 	if err := expectProbes(m, nil); err != nil {
 		t.Error(err)
 	}
@@ -187,7 +252,69 @@ func TestCleanupPods(t *testing.T) {
 		{"pod_keep", "prober2", liveness},
 		{"pod_keep", "prober3", startup},
 	}
-	if err := waitForWorkerExit(m, removedProbes); err != nil {
+	if err := waitForWorkerExit(m, removedProbes, slow_interval); err != nil {
+		t.Fatal(err)
+	}
+	if err := expectProbes(m, expectedProbes); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCleanupFastProbePods(t *testing.T) {
+	m := newTestManager()
+	defer cleanup(t, m)
+	podToCleanup := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "pod_cleanup",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				Name:           "prober1",
+				ReadinessProbe: defaultFastProbe,
+			}, {
+				Name:          "prober2",
+				LivenessProbe: defaultFastProbe,
+			}, {
+				Name:         "prober3",
+				StartupProbe: defaultFastProbe,
+			}},
+		},
+	}
+	podToKeep := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "pod_keep",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				Name:           "prober1",
+				ReadinessProbe: defaultFastProbe,
+			}, {
+				Name:          "prober2",
+				LivenessProbe: defaultFastProbe,
+			}, {
+				Name:         "prober3",
+				StartupProbe: defaultFastProbe,
+			}},
+		},
+	}
+	m.AddPod(&podToCleanup)
+	m.AddPod(&podToKeep)
+
+	desiredPods := map[types.UID]sets.Empty{}
+	desiredPods[podToKeep.UID] = sets.Empty{}
+	m.CleanupPods(desiredPods)
+
+	removedProbes := []probeKey{
+		{"pod_cleanup", "prober1", readiness},
+		{"pod_cleanup", "prober2", liveness},
+		{"pod_cleanup", "prober3", startup},
+	}
+	expectedProbes := []probeKey{
+		{"pod_keep", "prober1", readiness},
+		{"pod_keep", "prober2", liveness},
+		{"pod_keep", "prober3", startup},
+	}
+	if err := waitForWorkerExit(m, removedProbes, fast_interval); err != nil {
 		t.Fatal(err)
 	}
 	if err := expectProbes(m, expectedProbes); err != nil {
@@ -205,6 +332,32 @@ func TestCleanupRepeated(t *testing.T) {
 				ReadinessProbe: defaultProbe,
 				LivenessProbe:  defaultProbe,
 				StartupProbe:   defaultProbe,
+			}},
+		},
+	}
+
+	const numTestPods = 100
+	for i := 0; i < numTestPods; i++ {
+		pod := podTemplate
+		pod.UID = types.UID(strconv.Itoa(i))
+		m.AddPod(&pod)
+	}
+
+	for i := 0; i < 10; i++ {
+		m.CleanupPods(map[types.UID]sets.Empty{})
+	}
+}
+
+func TestCleanupFastProbeRepeated(t *testing.T) {
+	m := newTestManager()
+	defer cleanup(t, m)
+	podTemplate := v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{
+				Name:           "prober1",
+				ReadinessProbe: defaultFastProbe,
+				LivenessProbe:  defaultFastProbe,
+				StartupProbe:   defaultFastProbe,
 			}},
 		},
 	}
@@ -386,10 +539,8 @@ outer:
 	return fmt.Errorf("Unexpected probes: %v; Missing probes: %v;", unexpected, missing)
 }
 
-const interval = 1 * time.Second
-
 // Wait for the given workers to exit & clean up.
-func waitForWorkerExit(m *manager, workerPaths []probeKey) error {
+func waitForWorkerExit(m *manager, workerPaths []probeKey, interval time.Duration) error {
 	for _, w := range workerPaths {
 		condition := func() (bool, error) {
 			_, exists := m.getWorker(w.podUID, w.containerName, w.probeType)
@@ -408,7 +559,7 @@ func waitForWorkerExit(m *manager, workerPaths []probeKey) error {
 }
 
 // Wait for the given workers to exit & clean up.
-func waitForReadyStatus(m *manager, ready bool) error {
+func waitForReadyStatus(m *manager, ready bool, interval time.Duration) error {
 	condition := func() (bool, error) {
 		status, ok := m.statusManager.GetPodStatus(testPodUID)
 		if !ok {
@@ -432,7 +583,7 @@ func waitForReadyStatus(m *manager, ready bool) error {
 }
 
 // cleanup running probes to avoid leaking goroutines.
-func cleanup(t *testing.T, m *manager) {
+func cleanup(t *testing.T, m *manager, interval time.Duration) {
 	m.CleanupPods(nil)
 
 	condition := func() (bool, error) {
